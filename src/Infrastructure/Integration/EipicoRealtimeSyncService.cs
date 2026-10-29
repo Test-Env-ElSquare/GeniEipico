@@ -45,6 +45,23 @@ internal sealed class EipicoRealtimeSyncService(
             UpsertSignalAsync,
             cancellationToken);
 
+        // Production signals are the live dashboard's primary stream. While a
+        // full page is still available, keep draining it before touching retry
+        // queues from dependency-heavy streams (for example old material
+        // splits). A handful of slow retries must not freeze fresh Production.
+        if (signals >= Math.Clamp(options.BatchSize, 1, 1000))
+        {
+            return new EipicoRealtimeSyncResult(
+                HandheldCount: 0,
+                SplitCount: 0,
+                MachineLoadCount: 0,
+                SignalCount: signals,
+                ScaleSignalCount: 0,
+                ScaleLiveMessageCount: 0,
+                EnergyCount: 0,
+                HarmonicCount: 0);
+        }
+
         var scaleSignals = await SyncStreamAsync(
             ScaleSignalStream,
             (lastId, size, token) => source.ReadScaleSignalsAfterAsync(lastId, size, token),
@@ -161,8 +178,6 @@ internal sealed class EipicoRealtimeSyncService(
         CancellationToken cancellationToken)
         where TRecord : class, IEipicoRealtimeRecord
     {
-        await RetryErrorsAsync(streamName, readById, upsert, cancellationToken);
-
         var checkpoint = await db.SyncCheckpoints
             .SingleOrDefaultAsync(
                 x => x.SourceSystem == SourceSystem && x.StreamName == streamName,
@@ -199,6 +214,15 @@ internal sealed class EipicoRealtimeSyncService(
         }
 
         var lastSourceId = checkpoint.LastSourceId;
+        var currentSourceMax = await readCurrentMax(cancellationToken);
+
+        // New records always take priority. Retry queues can contain old
+        // dependency failures that each consume a SQL timeout; processing them
+        // ahead of the live page makes a healthy stream look stopped.
+        if (lastSourceId >= currentSourceMax)
+        {
+            await RetryErrorsAsync(streamName, readById, upsert, cancellationToken);
+        }
 
         var records = await readAfter(
             lastSourceId,
