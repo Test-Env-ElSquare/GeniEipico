@@ -150,6 +150,83 @@ IRepository<T> Repo<T>(IEnumerable<T> data) where T : Entity
         _ => throw new Exception($"Unexpected repository write/call: {method.Name}")
     });
 
+// Signage compatibility: keep the old wire shape and let the view own aggregates.
+var signageMachines = new[]
+{
+    new Machine { Id = 10, LineId = 1, Name = "E1_Test_Fill", MachineType = "Fill", IsDominant = true },
+    new Machine { Id = 11, LineId = 1, Name = "E1_Test_Cart", MachineType = "Cart" },
+    new Machine { Id = 12, LineId = 99, Name = "OtherTenant" }
+};
+var signageLines = new[]
+{
+    new ProductionLine { Id = 1, FactoryId = 7, Name = "E1_Test", ViewName = "Display line", AliasName = "Tablet - Line", Number = 1 },
+    new ProductionLine { Id = 2, FactoryId = 7, Name = "E1_Scheduled", ViewName = "Scheduled line" },
+    new ProductionLine { Id = 99, FactoryId = 8, Name = "Other" }
+};
+var signageLoads = new[]
+{
+    new Domain.Entities.Production.MachineMaterialLoad { Id = 1, BatchId = 1, MachineId = 10, LineId = 2, ActivationDate = at, IsPending = false },
+    new Domain.Entities.Production.MachineMaterialLoad { Id = 2, BatchId = 2, MachineId = 10, LineId = 2, ActivationDate = at, IsPending = false },
+    new Domain.Entities.Production.MachineMaterialLoad { Id = 3, BatchId = 2, MachineId = 10, LineId = 2, ActivationDate = at, IsPending = false, FinishingDate = at },
+    new Domain.Entities.Production.MachineMaterialLoad { Id = 4, BatchId = 3, MachineId = 10, LineId = 2, ActivationDate = at, IsPending = true }
+};
+var signageBatches = Enumerable.Range(1, 3).Select(id => new Domain.Entities.Production.Batch
+    { Id = id, CustomerId = 3, SkuId = 1, LineId = 1, Uid = $"Batch{id}" }).ToArray();
+var signageUow = StubProxy.For<IUnitOfWork>((method, _) => method.Name switch
+{
+    "get_Machines" => Repo(signageMachines),
+    "get_ProductionLines" => Repo(signageLines),
+    "get_MachineMaterialLoads" => Repo(signageLoads),
+    "get_Batches" => Repo(signageBatches),
+    "get_Skus" => Repo(new[] { new Domain.Entities.MasterData.Sku { Id = 1, CustomerId = 3, Name = "Product" } }),
+    "get_Scales" => Repo(new[] { new Scale { Id = 5, FactoryId = 7, Name = "Scale1", Zone = "4", TelemetryAt = at } }),
+    _ => throw new Exception($"Unexpected signage repository call: {method.Name}")
+});
+int[] queriedSignageLines = [];
+var signageReader = StubProxy.For<IFactoryLayoutSignalReader>((method, values) =>
+{
+    queriedSignageLines = (int[])values![2]!;
+    return Task.FromResult<IReadOnlyList<FactoryLayoutSignal>>([
+        new() { CustomerId = 3, FactoryId = 7, LineId = 1, MachineName = "E1_Test_Fill", SignalId = 8,
+            ShiftStartTime = at, LatestTimeStamp = at.AddHours(1), TotalCountDiff = 1234m, Count = 9876, Speed = 100 },
+        new() { CustomerId = 9, FactoryId = 8, LineId = 99, MachineName = "OtherTenant", TotalCountDiff = 999 }
+    ]);
+});
+var signageService = new SignageLayoutService(signageUow, signageReader);
+var signageScope = new ScadaLiveViewScope(3, 7, null, new HashSet<int> { 1 });
+var signalPayload = await signageService.GetFactorySignalsAsync(signageScope);
+Check(queriedSignageLines.SequenceEqual(new[] { 1 }) && signalPayload.Count == 1 && signalPayload[0].LineId == 1,
+    "Signage view reads and responses stay within authorized lines and tenant");
+Check(signalPayload[0].Machines[0].LatestSignal.Count == 1234m,
+    "Legacy latestSignal.count uses view total, not raw cumulative counter or code recalculation");
+Check(signalPayload[0].MachineCount == 1 && signageService.GetMachines(signageScope).Count == 2,
+    "No-signal machines remain in definitions without inventing telemetry");
+var wire = System.Text.Json.JsonSerializer.SerializeToElement(signalPayload, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+Check(wire.ValueKind == System.Text.Json.JsonValueKind.Array && wire[0].GetProperty("machines")[0]
+    .GetProperty("latestSignal").GetProperty("timeStamp").GetString()!.EndsWith("Z"),
+    "Legacy signal response is a bare array with nested latestSignal and UTC timestamps");
+Check(wire[0].GetProperty("machines")[0].GetProperty("latestSignal").TryGetProperty("sku", out _) &&
+    wire[0].GetProperty("machines")[0].GetProperty("latestSignal").TryGetProperty("qrejectDiff", out _),
+    "Legacy telemetry JSON field casing is preserved");
+Check(signageService.GetFactoryLines(signageScope)[0].Name == "Display line" &&
+    signageService.GetFactoryLines(signageScope)[0].Lines.Single(x => x.Id == 10).IsDominant,
+    "Legacy definitions expose display names and dominant machine flags");
+Check(signageService.GetScales(signageScope).Single().Room == "Room 4",
+    "Scale room format matches Eipico's InitialScales");
+var scheduledScope = new ScadaLiveViewScope(3, 7, null, new HashSet<int> { 2 });
+var currentBatches = signageService.GetCurrentBatches(scheduledScope);
+Check(currentBatches.Count == 1 && currentBatches[0].LineId == 2 && currentBatches[0].BatchId == "Batch1",
+    "Current batch follows scheduler line, excludes finished groups and pending loads");
+Check(signageService.GetCurrentBatches(signageScope).Count == 0,
+    "Current batch never falls back to machine or batch definition line");
+var signageRegistry = new API.Realtime.Scada.ScadaRealtimeSubscriptionRegistry();
+var groupA = signageRegistry.Create("signage-signals", "ReceiveFactorySignals", signageScope);
+var groupB = signageRegistry.Create("signage-signals", "ReceiveFactorySignals", scheduledScope);
+Check(groupA.GroupName != groupB.GroupName,
+    "Different line permissions never share a legacy factory broadcast group");
+signageRegistry.Register("client", groupA);
+signageRegistry.UnregisterConnection("client");
+Check(signageRegistry.GetActiveSubscriptions().Count == 0, "Disconnect removes legacy subscription");
 var machineRepo = Repo(new[] { machine });
 var lineRepo = Repo(new[] { new ProductionLine { Id = 1, FactoryId = 1 } });
 var tagRepo = Repo(tags);

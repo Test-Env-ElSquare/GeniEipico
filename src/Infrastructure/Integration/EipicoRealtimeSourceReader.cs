@@ -587,10 +587,16 @@ internal sealed class EipicoRealtimeSourceReader(string connectionString)
                 machine.Name,
                 machine.UID,
                 machine.Faunctionality,
-                machine.RatedSpeed
+                machine.RatedSpeed,
+                scheduledLine.Name, scheduledFactory.Name,
+                physicalLine.Name, physicalFactory.Name
             FROM [RealTime].[MachineLoads] AS load
             LEFT JOIN [Definitions].[Machines] AS machine
                 ON machine.Id = load.MachineId
+            LEFT JOIN [Definitions].[Lines] scheduledLine ON scheduledLine.Id = load.LineId
+            LEFT JOIN [Definitions].[Factories] scheduledFactory ON scheduledFactory.Id = scheduledLine.FactoryId
+            LEFT JOIN [Definitions].[Lines] physicalLine ON physicalLine.Id = machine.LineId
+            LEFT JOIN [Definitions].[Factories] physicalFactory ON physicalFactory.Id = physicalLine.FactoryId
             {WhereClause(mode, "load.Id")}
             ORDER BY load.Id {OrderDirection(mode)};
             """;
@@ -619,7 +625,11 @@ internal sealed class EipicoRealtimeSourceReader(string connectionString)
                 MachineName = GetNullableString(reader, 11),
                 MachineUid = GetNullableString(reader, 12),
                 MachineType = GetNullableString(reader, 13),
-                RatedSpeed = GetNullableDecimal(reader, 14)
+                RatedSpeed = GetNullableDecimal(reader, 14),
+                ScheduledLineName = GetNullableString(reader, 15),
+                ScheduledFactoryName = GetNullableString(reader, 16),
+                PhysicalLineName = GetNullableString(reader, 17),
+                PhysicalFactoryName = GetNullableString(reader, 18)
             });
         }
 
@@ -842,4 +852,8 @@ internal sealed class EipicoMachineLoadRecord : IEipicoRealtimeRecord
     public string? MachineUid { get; init; }
     public string? MachineType { get; init; }
     public decimal? RatedSpeed { get; init; }
+    public string? ScheduledLineName { get; init; }
+    public string? ScheduledFactoryName { get; init; }
+    public string? PhysicalLineName { get; init; }
+    public string? PhysicalFactoryName { get; init; }
 }

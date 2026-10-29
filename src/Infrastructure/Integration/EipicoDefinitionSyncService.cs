@@ -320,6 +320,7 @@ internal sealed class EipicoDefinitionSyncService(
                 FirstValue(sourceMachine.Functionality, "Eipico")!,
                 60);
             machine.RatedSpeedRpm = ToNullableInt(sourceMachine.RatedSpeed);
+            machine.IsDominant = sourceMachine.IsDominant ?? false;
             result.Machines++;
         }
     }

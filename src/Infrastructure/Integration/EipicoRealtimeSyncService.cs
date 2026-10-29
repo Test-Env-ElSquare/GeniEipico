@@ -1024,7 +1024,23 @@ internal sealed class EipicoRealtimeSyncService(
                 $"No synchronized material '{materialUid}' exists on batch '{batchUid}'.");
         }
 
-        var machine = await EnsureMachineAsync(batch.LineId, sourceRecord, cancellationToken);
+        var physicalLine = await db.ProductionLines.AsNoTracking()
+            .Where(x => x.Code == sourceRecord.PhysicalLineName &&
+                        x.Factory.Name == sourceRecord.PhysicalFactoryName &&
+                        x.Factory.CustomerId == batch.CustomerId && !x.IsDeleted)
+            .Select(x => (int?)x.Id).SingleOrDefaultAsync(cancellationToken)
+            ?? throw new EipicoDependencyNotReadyException($"Machine load {sourceRecord.Id}: physical machine line is not synchronized.");
+        int? scheduledLine = null;
+        if (!string.IsNullOrWhiteSpace(sourceRecord.ScheduledLineName))
+        {
+            scheduledLine = await db.ProductionLines.AsNoTracking()
+                .Where(x => x.Code == sourceRecord.ScheduledLineName &&
+                            x.Factory.Name == sourceRecord.ScheduledFactoryName &&
+                            x.Factory.CustomerId == batch.CustomerId && !x.IsDeleted)
+                .Select(x => (int?)x.Id).SingleOrDefaultAsync(cancellationToken)
+                ?? throw new EipicoDependencyNotReadyException($"Machine load {sourceRecord.Id}: scheduled line is not synchronized.");
+        }
+        var machine = await EnsureMachineAsync(physicalLine, sourceRecord, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         var target = await db.MachineMaterialLoads.SingleOrDefaultAsync(
@@ -1041,6 +1057,7 @@ internal sealed class EipicoRealtimeSyncService(
         target.MaterialSplitId = materialSplit?.Id;
         target.MachineId = machine.Id;
         target.MaterialUid = materialUid;
+        target.LineId = scheduledLine;
         target.Weight = sourceRecord.Weight;
         target.LoadedAt = sourceTime.ToUtc(sourceRecord.LoadedAt);
         target.ShiftStartTime = sourceTime.ToUtc(sourceRecord.ShiftStartTime);

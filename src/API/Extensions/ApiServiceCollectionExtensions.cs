@@ -34,7 +34,10 @@ public static class ApiServiceCollectionExtensions
         if (configuration.GetValue<bool>("RuntimeFeatures:EnableEnergyProjection"))
             services.AddHostedService<EnergyProjectionService>();
         if (configuration.GetValue<bool>("RuntimeFeatures:EnableRealtimeMonitor"))
+        {
             services.AddHostedService<ScadaRealtimeMonitorService>();
+            services.AddHostedService<API.Realtime.Signage.SignageSignalsMonitor>();
+        }
         if (configuration.GetValue<bool>("RuntimeFeatures:EnableEipicoSync"))
             services.AddHostedService<EipicoSyncWorker>();
         services.AddCors(options =>

@@ -399,7 +399,7 @@ public sealed class ScadaRealtimeMonitorService : BackgroundService
         using var timer = new PeriodicTimer(_pollInterval);
         while (await timer.WaitForNextTickAsync(stoppingToken))
         {
-            var subscriptions = _registry.GetActiveSubscriptions();
+            var subscriptions = _registry.GetActiveSubscriptions().Where(x => x.Zone != "signage-signals").ToArray();
             var activeGroups = subscriptions
                 .Select(x => x.GroupName)
                 .ToHashSet(StringComparer.Ordinal);

@@ -76,4 +76,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<ScadaRealtimeHub>("/hubs/scada");
+app.MapHub<API.Realtime.Signage.SignageSignalsHub>("/signalsHub");
+app.MapHub<API.Realtime.Signage.SignageScaleStatusHub>("/hubs/scaleStatus");
 app.Run();

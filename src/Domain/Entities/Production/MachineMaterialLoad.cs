@@ -9,6 +9,7 @@ public class MachineMaterialLoad : Entity
     public int BatchMaterialId { get; set; }
     public int? MaterialSplitId { get; set; }
     public int MachineId { get; set; }
+    public int? LineId { get; set; }
     public string MaterialUid { get; set; } = string.Empty;
     public decimal? Weight { get; set; }
     public DateTime LoadedAt { get; set; }

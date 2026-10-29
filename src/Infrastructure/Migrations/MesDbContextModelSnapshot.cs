@@ -3831,6 +3831,9 @@ namespace Infrastructure.Migrations
                     b.Property<bool?>("IsPending")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("LineId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("LoadedAt")
                         .HasColumnType("datetime2");
 
@@ -3858,6 +3861,8 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("BatchMaterialId");
+
+                    b.HasIndex("LineId");
 
                     b.HasIndex("MachineId");
 
@@ -5513,6 +5518,11 @@ namespace Infrastructure.Migrations
                         .HasForeignKey("BatchMaterialId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Domain.Entities.Organization.ProductionLine", null)
+                        .WithMany()
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Entities.Scada.Machine", "Machine")
                         .WithMany()

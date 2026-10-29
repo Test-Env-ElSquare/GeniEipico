@@ -137,6 +137,7 @@ public class MachineMaterialLoadConfiguration : IEntityTypeConfiguration<Machine
         builder.HasOne(x => x.BatchMaterial).WithMany(x => x.MachineMaterialLoads).HasForeignKey(x => x.BatchMaterialId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.MaterialSplit).WithMany(x => x.MachineMaterialLoads).HasForeignKey(x => x.MaterialSplitId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne(x => x.Machine).WithMany().HasForeignKey(x => x.MachineId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne<Domain.Entities.Organization.ProductionLine>().WithMany().HasForeignKey(x => x.LineId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => new { x.BatchId, x.MachineId, x.LoadedAt });
         builder.HasIndex(x => x.SourceRecordId).IsUnique().HasFilter("[SourceRecordId] IS NOT NULL");
     }

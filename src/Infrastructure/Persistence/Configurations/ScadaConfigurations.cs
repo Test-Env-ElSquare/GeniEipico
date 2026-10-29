@@ -49,7 +49,7 @@ public class MachineStateConfiguration : IEntityTypeConfiguration<MachineState>
             .WithMany()
             .HasForeignKey(x => x.LineId)
             .OnDelete(DeleteBehavior.Restrict);
-        builder.Property(x => x.ShiftStartTime).HasColumnType("datetime2" );
+        builder.Property(x => x.ShiftStartTime).HasColumnType("datetime2");
         // Production is an append-only signal log, not one mutable row per machine.
         builder.HasIndex(x => x.CustomerId);
         builder.HasIndex(x => new { x.FactoryId, x.MachineId, x.Timestamp });

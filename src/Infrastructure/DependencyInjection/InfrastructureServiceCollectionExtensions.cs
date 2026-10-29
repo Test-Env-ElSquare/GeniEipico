@@ -102,6 +102,7 @@ public static class InfrastructureServiceCollectionExtensions
 
                         var isHubRequest =
                             requestPath.StartsWithSegments("/hubs") ||
+                            requestPath.Equals(new Microsoft.AspNetCore.Http.PathString("/signalsHub")) ||
                             requestPath.Value?.Contains(
                                 "/hubs/",
                                 StringComparison.OrdinalIgnoreCase) == true;
@@ -155,6 +156,8 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IOverviewRepository, OverviewRepository>();
+        services.AddScoped<IFactoryLayoutSignalReader, FactoryLayoutSignalReader>();
+        services.AddScoped<ISignageLayoutService, Application.Services.SignageLayoutService>();
         services.AddScoped<IOverviewLiveProvider, EipicoOverviewProvider>();
         services.AddSingleton(TimeProvider.System);
         services.Configure<Application.Dtos.Overview.EipicoOverviewOptions>(configuration.GetSection("Overview:Eipico"));
