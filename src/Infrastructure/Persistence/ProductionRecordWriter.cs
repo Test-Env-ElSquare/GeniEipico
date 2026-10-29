@@ -79,6 +79,7 @@ public sealed class ProductionRecordWriter(DbContextOptions<MesDbContext> option
             record.CustomerId = factory.CustomerId;
             record.FactoryId = factory.Id;
             record.LineId = line.Id;
+            record.ShiftStartTime = Application.Common.Time.EipicoProductionShift.ResolveUtc(record.Timestamp, factory.TimeZone);
             db.MachineStates.Add(record);
 
             var fromState = previous is null ? null : ProductionRecordFactory.StateLabel(previous);

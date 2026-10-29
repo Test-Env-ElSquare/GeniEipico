@@ -23,6 +23,7 @@ public class MachineState : Entity
     public int Sku { get; set; }
     public int Fault { get; set; }
     public DateTime Timestamp { get; set; }
+    public DateTime? ShiftStartTime { get; set; }
 
     public void ApplyCount(int currentCount)
     {

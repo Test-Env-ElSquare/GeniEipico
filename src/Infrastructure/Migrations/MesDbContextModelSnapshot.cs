@@ -455,6 +455,147 @@ namespace Infrastructure.Migrations
                     b.ToTable("AiInsights", "Analytics");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Analytics.EipicoOeePerHourViewRow", b =>
+                {
+                    b.Property<decimal>("AVGSpeed")
+                        .HasPrecision(20, 2)
+                        .HasColumnType("decimal(20,2)");
+
+                    b.Property<decimal>("Availability")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("Count")
+                        .HasPrecision(38, 6)
+                        .HasColumnType("decimal(38,6)");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FactoryId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("HourEndTime")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<DateTime>("HourStartTime")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<int>("LineId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MachineName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal>("OEE")
+                        .HasPrecision(20, 4)
+                        .HasColumnType("decimal(20,4)");
+
+                    b.Property<decimal>("Performance")
+                        .HasPrecision(20, 2)
+                        .HasColumnType("decimal(20,2)");
+
+                    b.Property<decimal>("Qreject")
+                        .HasPrecision(38, 6)
+                        .HasColumnType("decimal(38,6)");
+
+                    b.Property<decimal>("Quality")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<DateTime>("ShiftEndTime")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ShiftName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("ShiftStartTime")
+                        .HasColumnType("datetime2(7)");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("VW_EipicoOee_PerHour", "Analytics");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Analytics.EipicoOeeViewRow", b =>
+                {
+                    b.Property<decimal>("AVGSpeed")
+                        .HasPrecision(20, 2)
+                        .HasColumnType("decimal(20,2)");
+
+                    b.Property<decimal>("Availability")
+                        .HasPrecision(7, 4)
+                        .HasColumnType("decimal(7,4)");
+
+                    b.Property<decimal>("Count")
+                        .HasPrecision(38, 6)
+                        .HasColumnType("decimal(38,6)");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FactoryId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LineId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MachineId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MachineName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal>("OEE")
+                        .HasPrecision(20, 4)
+                        .HasColumnType("decimal(20,4)");
+
+                    b.Property<decimal>("Performance")
+                        .HasPrecision(20, 2)
+                        .HasColumnType("decimal(20,2)");
+
+                    b.Property<decimal>("Qreject")
+                        .HasPrecision(38, 6)
+                        .HasColumnType("decimal(38,6)");
+
+                    b.Property<decimal>("Quality")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<DateTime>("ShiftEndTime")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<int>("ShiftId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ShiftName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("ShiftStartTime")
+                        .HasColumnType("datetime2(7)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("int");
+
+                    b.ToTable((string)null);
+
+                    b.ToView("VW_EipicoOee", "Analytics");
+                });
+
             modelBuilder.Entity("Domain.Entities.Analytics.EnergyHarmonicReading", b =>
                 {
                     b.Property<int>("Id")
@@ -2871,6 +3012,12 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Organization.ProductionLine", b =>
                 {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
                     b.Property<string>("AliasName")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -2878,12 +3025,6 @@ namespace Infrastructure.Migrations
                     b.Property<string>("Area")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Code")
                         .IsRequired()
@@ -2912,24 +3053,24 @@ namespace Infrastructure.Migrations
                     b.Property<int?>("MaxSpeedUpm")
                         .HasColumnType("int");
 
-                    b.Property<int?>("Number")
-                        .HasColumnType("int");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("Number")
+                        .HasColumnType("int");
+
                     b.Property<string>("ProductType")
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("ViewName")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -3860,6 +4001,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
 
+                    b.Property<bool>("IsDominant")
+                        .HasColumnType("bit");
+
                     b.Property<int>("LineId")
                         .HasColumnType("int");
 
@@ -3944,6 +4088,9 @@ namespace Infrastructure.Migrations
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)")
                         .HasColumnName("QrejectDiff");
+
+                    b.Property<DateTime?>("ShiftStartTime")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("Sku")
                         .HasColumnType("int")
@@ -5647,6 +5794,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("ProcessParameters");
                 });
 
+            modelBuilder.Entity("Domain.Entities.MasterData.Transformer", b =>
+                {
+                    b.Navigation("LineLinks");
+                });
+
             modelBuilder.Entity("Domain.Entities.Organization.Customer", b =>
                 {
                     b.Navigation("Factories");
@@ -5657,6 +5809,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("ProductionLines");
 
                     b.Navigation("ShiftLinks");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Organization.ProductionLine", b =>
+                {
+                    b.Navigation("TransformerLinks");
                 });
 
             modelBuilder.Entity("Domain.Entities.Planning.ProductionRoute", b =>

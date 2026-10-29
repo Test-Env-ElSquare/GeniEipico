@@ -486,6 +486,9 @@ internal sealed class EipicoRealtimeSyncService(
             StateReason = sourceRecord.StateReason ?? 0,
             Sku = sourceRecord.Sku ?? 0,
             Fault = sourceRecord.Fault ?? 0,
+            ShiftStartTime = sourceRecord.ShiftStartTime.HasValue
+                ? sourceTime.ToUtc(sourceRecord.ShiftStartTime.Value)
+                : Application.Common.Time.EipicoProductionShift.ResolveUtc(timestampUtc, factory.TimeZone),
             Timestamp = timestampUtc
         };
 

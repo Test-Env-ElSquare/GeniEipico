@@ -17,6 +17,7 @@ public class Machine : SoftDeleteEntity
     public decimal? RatedPowerKw { get; set; }
     public DateTime? InstallDate { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool IsDominant { get; set; }
 
     public ProductionLine Line { get; set; } = null!;
     public Device? Device { get; set; }
