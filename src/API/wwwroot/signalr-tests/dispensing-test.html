@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dispensing Zone SignalR Test</title>
+    <link rel="stylesheet" href="scada-test.css">
+</head>
+<body>
+<main class="page">
+    <h1>Dispensing Zone SignalR Test</h1>
+    <p class="subtitle">
+        Tests <code>DispensingZoneUpdated</code> from the SCADA SignalR hub.
+        <a href="warehouse-test.html">Warehouse</a>
+        &middot;
+        <a href="production-test.html">Production</a>
+    </p>
+
+    <section class="panel">
+        <div class="grid">
+            <div class="field full">
+                <label for="apiBaseUrl">API base URL</label>
+                <input id="apiBaseUrl" autocomplete="url">
+            </div>
+            <div class="field">
+                <label for="email">Email</label>
+                <input id="email" type="email" autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password">
+            </div>
+            <div class="field full">
+                <label for="token">JWT access token</label>
+                <textarea id="token" spellcheck="false"></textarea>
+            </div>
+            <div class="field">
+                <label for="factoryId">FactoryId</label>
+                <input id="factoryId" type="number" min="1" value="1">
+            </div>
+            <div class="field">
+                <label for="lineId">LineId (optional)</label>
+                <input id="lineId" type="number" min="1">
+            </div>
+        </div>
+        <div class="buttons">
+            <button id="loginButton" type="button">Login</button>
+            <button id="connectButton" type="button">Connect & Subscribe</button>
+            <button id="disconnectButton" class="secondary" type="button">Disconnect</button>
+        </div>
+        <div class="hint">
+            The base URL is inferred automatically for localhost and for an IIS application
+            hosted under /GeniPark.
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="status-row">
+            <div id="connectionStatus" class="status">
+                <span class="dot"></span>
+                <span id="connectionStatusText">Disconnected</span>
+            </div>
+            <div id="messageStats" class="stats">0 messages</div>
+        </div>
+        <pre id="output">Waiting for connection...</pre>
+    </section>
+</main>
+
+<script src="../lib/signalr/signalr.min.js"></script>
+<script src="scada-test.js"></script>
+<script>
+    createScadaSignalRTester({
+        eventName: "DispensingZoneUpdated",
+        subscribeMethod: "SubscribeDispensing",
+        unsubscribeMethod: "UnsubscribeDispensing"
+    });
+</script>
+</body>
+</html>

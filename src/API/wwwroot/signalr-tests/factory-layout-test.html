@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Factory Layout SignalR Test</title>
+    <link rel="stylesheet" href="scada-test.css">
+    <style>
+        .layout-header, .line-header, .machine-detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .layout-header { margin-bottom: 14px; }
+        .layout-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .line-card {
+            padding: 16px;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            background: #0b1426;
+        }
+        .line-name { font-size: 16px; font-weight: 750; }
+        .line-code { margin-left: 7px; color: #94a3b8; font-size: 12px; }
+        .state {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 750;
+            text-transform: uppercase;
+        }
+        .state::before {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #94a3b8;
+            content: "";
+        }
+        .state.running { color: #34d399; }
+        .state.running::before { background: #10b981; }
+        .state.stopped { color: #fb7185; }
+        .state.stopped::before { background: #f43f5e; }
+        .state.no_data { color: #94a3b8; }
+        .machines {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .machine {
+            width: 100%;
+            min-height: 76px;
+            padding: 11px;
+            border-color: #475569;
+            background: #111c31;
+            text-align: left;
+        }
+        .machine.running { border-color: #10b981; }
+        .machine.stopped { border-color: #f43f5e; }
+        .machine-name { display: block; font-weight: 700; }
+        .machine-meta { display: block; margin-top: 7px; color: #94a3b8; font-size: 12px; }
+        .empty { margin-top: 14px; color: #94a3b8; }
+        .machine-detail {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+        .metric {
+            padding: 14px;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            background: #0b1426;
+        }
+        .metric-label { color: #94a3b8; font-size: 12px; }
+        .metric-value { margin-top: 8px; font-size: 18px; font-weight: 750; word-break: break-word; }
+        @media (max-width: 760px) {
+            .layout-grid, .machines, .machine-detail { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <h1>Factory Layout SignalR Test</h1>
+    <p class="subtitle">
+        Tests <code>SubscribeFactoryLayout</code> and <code>FactoryLayoutUpdated</code> every 10 seconds.
+        <a href="factory-snapshot-test.html">Factory snapshot</a>
+    </p>
+
+    <section class="panel">
+        <div class="grid">
+            <div class="field full">
+                <label for="apiBaseUrl">API base URL</label>
+                <input id="apiBaseUrl" autocomplete="url">
+            </div>
+            <div class="field">
+                <label for="email">Email</label>
+                <input id="email" type="email" autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password">
+            </div>
+            <div class="field full">
+                <label for="token">JWT access token</label>
+                <textarea id="token" spellcheck="false"></textarea>
+            </div>
+            <div class="field">
+                <label for="factoryId">FactoryId</label>
+                <input id="factoryId" type="number" min="1" value="5">
+            </div>
+            <div class="field">
+                <label for="lineId">LineId (optional; empty returns all authorized lines)</label>
+                <input id="lineId" type="number" min="1" placeholder="All authorized lines">
+            </div>
+        </div>
+        <div class="buttons">
+            <button id="loginButton" type="button">Login</button>
+            <button id="connectButton" type="button">Connect &amp; Subscribe</button>
+            <button id="disconnectButton" class="secondary" type="button">Disconnect</button>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="layout-header">
+            <strong>Factory layout</strong>
+            <span id="layoutMeta" class="stats">Waiting for data</span>
+        </div>
+        <div id="layout" class="layout-grid"></div>
+    </section>
+
+    <section class="panel">
+        <div class="machine-detail-header">
+            <strong id="selectedMachine">Select a machine</strong>
+            <span id="selectedMachineStatus" class="state no_data">no data</span>
+        </div>
+        <div class="machine-detail">
+            <div class="metric">
+                <div class="metric-label">Speed</div>
+                <div id="machineSpeed" class="metric-value">—</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Current-shift CountDiff</div>
+                <div id="machineCount" class="metric-value">—</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Latest signal time</div>
+                <div id="machineTime" class="metric-value">—</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="status-row">
+            <div id="connectionStatus" class="status">
+                <span class="dot"></span>
+                <span id="connectionStatusText">Disconnected</span>
+            </div>
+            <div id="messageStats" class="stats">0 messages</div>
+        </div>
+        <pre id="output">Waiting for connection...</pre>
+    </section>
+</main>
+
+<script src="../lib/signalr/signalr.min.js"></script>
+<script src="scada-test.js"></script>
+<script>
+    let selectedMachineId = null;
+
+    function statusClass(value) {
+        return value === "running" || value === "stopped" ? value : "no_data";
+    }
+
+    function renderMachineDetail(machine) {
+        selectedMachineId = machine.machineId;
+        document.getElementById("selectedMachine").textContent = machine.name || machine.code;
+        const status = document.getElementById("selectedMachineStatus");
+        status.className = `state ${statusClass(machine.status)}`;
+        status.textContent = String(machine.status || "no_data").replace("_", " ");
+        document.getElementById("machineSpeed").textContent =
+            `${Number(machine.speed || 0).toLocaleString()} PpH`;
+        document.getElementById("machineCount").textContent =
+            `${Number(machine.count || 0).toLocaleString()} Part`;
+        document.getElementById("machineTime").textContent = machine.timestamp
+            ? new Date(machine.timestamp).toLocaleString()
+            : "No data in current shift";
+    }
+
+    function renderFactoryLayout(payload) {
+        if (!payload || !payload.success || !payload.data) return;
+        const data = payload.data;
+        const layout = document.getElementById("layout");
+        layout.replaceChildren();
+        document.getElementById("layoutMeta").textContent =
+            `${data.lineCount} line(s) · ${data.machineCount} machine(s) · ${data.currentShift?.shiftName || "Current shift"}`;
+
+        let selected = null;
+        for (const line of data.lines || []) {
+            const card = document.createElement("article");
+            card.className = "line-card";
+            const header = document.createElement("div");
+            header.className = "line-header";
+            const name = document.createElement("div");
+            name.innerHTML = `<span class="line-name"></span><span class="line-code"></span>`;
+            name.querySelector(".line-name").textContent = line.name;
+            name.querySelector(".line-code").textContent = line.code || "";
+            const state = document.createElement("span");
+            state.className = `state ${statusClass(line.status)}`;
+            state.textContent = String(line.status || "no_data").replace("_", " ");
+            header.append(name, state);
+            card.append(header);
+
+            const machines = document.createElement("div");
+            machines.className = "machines";
+            for (const machine of line.machines || []) {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = `machine ${statusClass(machine.status)}`;
+                const machineName = document.createElement("span");
+                machineName.className = "machine-name";
+                machineName.textContent = machine.name || machine.code;
+                const meta = document.createElement("span");
+                meta.className = "machine-meta";
+                meta.textContent = `Count ${Number(machine.count || 0).toLocaleString()} · Speed ${Number(machine.speed || 0).toLocaleString()}`;
+                button.append(machineName, meta);
+                button.addEventListener("click", () => renderMachineDetail(machine));
+                machines.append(button);
+                if (machine.machineId === selectedMachineId) selected = machine;
+            }
+            if (!line.machines?.length) {
+                const empty = document.createElement("div");
+                empty.className = "empty";
+                empty.textContent = "No active machines configured.";
+                machines.append(empty);
+            }
+            card.append(machines);
+            layout.append(card);
+        }
+
+        if (selected) renderMachineDetail(selected);
+    }
+
+    createScadaSignalRTester({
+        eventName: "FactoryLayoutUpdated",
+        subscribeMethod: "SubscribeFactoryLayout",
+        unsubscribeMethod: "UnsubscribeFactoryLayout",
+        onPayload: renderFactoryLayout
+    });
+</script>
+</body>
+</html>

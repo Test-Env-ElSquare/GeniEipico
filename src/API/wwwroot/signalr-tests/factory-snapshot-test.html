@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Factory Snapshot SignalR Test</title>
+    <link rel="stylesheet" href="scada-test.css">
+    <style>
+        .snapshot {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            overflow: hidden;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            background: #f8fbff;
+            color: #17213a;
+        }
+
+        .snapshot-card {
+            min-height: 112px;
+            padding: 22px 20px;
+            border-right: 1px solid #dbe5f2;
+        }
+
+        .snapshot-card:last-child {
+            border-right: 0;
+        }
+
+        .snapshot-label {
+            margin-bottom: 12px;
+            color: #71809e;
+            font-size: 13px;
+        }
+
+        .snapshot-value {
+            font-size: 27px;
+            font-weight: 750;
+        }
+
+        .running {
+            color: #13a96b;
+        }
+
+        .snapshot-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 12px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+
+        @media (max-width: 760px) {
+            .snapshot {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .snapshot-card:nth-child(2) {
+                border-right: 0;
+            }
+
+            .snapshot-card:nth-child(-n+2) {
+                border-bottom: 1px solid #dbe5f2;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <h1>Factory Snapshot SignalR Test</h1>
+    <p class="subtitle">
+        Tests <code>SubscribeFactorySnapshot</code> and
+        <code>FactorySnapshotUpdated</code>. The live view is checked every 10 seconds.
+        <a href="production-test.html">Production test</a>
+    </p>
+
+    <section class="panel">
+        <div class="grid">
+            <div class="field full">
+                <label for="apiBaseUrl">API base URL</label>
+                <input id="apiBaseUrl" autocomplete="url">
+            </div>
+            <div class="field">
+                <label for="email">Email</label>
+                <input id="email" type="email" autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password">
+            </div>
+            <div class="field full">
+                <label for="token">JWT access token</label>
+                <textarea id="token" spellcheck="false"></textarea>
+            </div>
+            <div class="field">
+                <label for="factoryId">FactoryId</label>
+                <input id="factoryId" type="number" min="1" value="5">
+            </div>
+            <div class="field">
+                <label for="lineId">LineId (optional; leave empty for all lines)</label>
+                <input id="lineId" type="number" min="1" placeholder="All authorized lines">
+            </div>
+        </div>
+        <div class="buttons">
+            <button id="loginButton" type="button">Login</button>
+            <button id="connectButton" type="button">Connect &amp; Subscribe</button>
+            <button id="disconnectButton" class="secondary" type="button">Disconnect</button>
+        </div>
+        <div class="hint">
+            The user token must include access to Factory 5 and any selected line.
+            The initial value appears immediately; later updates arrive only when values change.
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="snapshot-meta">
+            <strong>Factory snapshot</strong>
+            <span id="snapshotUpdated">Waiting for data</span>
+        </div>
+        <div class="snapshot">
+            <div class="snapshot-card">
+                <div class="snapshot-label">Line status</div>
+                <div id="runningLines" class="snapshot-value running">—</div>
+            </div>
+            <div class="snapshot-card">
+                <div class="snapshot-label">Total production</div>
+                <div id="totalProduction" class="snapshot-value">—</div>
+            </div>
+            <div class="snapshot-card">
+                <div class="snapshot-label">Reject rate</div>
+                <div id="rejectRate" class="snapshot-value">—</div>
+            </div>
+            <div class="snapshot-card">
+                <div class="snapshot-label">Active batches</div>
+                <div id="activeBatches" class="snapshot-value">—</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="status-row">
+            <div id="connectionStatus" class="status">
+                <span class="dot"></span>
+                <span id="connectionStatusText">Disconnected</span>
+            </div>
+            <div id="messageStats" class="stats">0 messages</div>
+        </div>
+        <pre id="output">Waiting for connection...</pre>
+    </section>
+</main>
+
+<script src="../lib/signalr/signalr.min.js"></script>
+<script src="scada-test.js"></script>
+<script>
+    function renderFactorySnapshot(payload) {
+        if (!payload || !payload.success || !payload.data) {
+            return;
+        }
+
+        const data = payload.data;
+        document.getElementById("runningLines").textContent =
+            `${Number(data.runningLines || 0).toLocaleString()} Running`;
+        document.getElementById("totalProduction").textContent =
+            Number(data.totalProduction || 0).toLocaleString();
+        document.getElementById("rejectRate").textContent =
+            `${(Number(data.rejectRate || 0) * 100).toFixed(1)}%`;
+        document.getElementById("activeBatches").textContent =
+            Number(data.activeBatches || 0).toLocaleString();
+        document.getElementById("snapshotUpdated").textContent =
+            `Last message: ${new Date(payload.ts || Date.now()).toLocaleString()}`;
+    }
+
+    createScadaSignalRTester({
+        eventName: "FactorySnapshotUpdated",
+        subscribeMethod: "SubscribeFactorySnapshot",
+        unsubscribeMethod: "UnsubscribeFactorySnapshot",
+        onPayload: renderFactorySnapshot
+    });
+</script>
+</body>
+</html>
