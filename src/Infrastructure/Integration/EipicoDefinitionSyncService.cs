@@ -1,6 +1,7 @@
 using Domain.Entities.IoT;
 using Domain.Entities.MasterData;
 using Domain.Entities.Organization;
+using Domain.Entities.Planning;
 using Domain.Entities.Scada;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -43,6 +44,11 @@ internal sealed class EipicoDefinitionSyncService(
                     snapshot,
                     cancellationToken);
                 result.Factories = factories.Count;
+                await db.SaveChangesAsync(cancellationToken);
+
+                await SyncDefaultFactoryShiftsAsync(
+                    factories.Values,
+                    cancellationToken);
                 await db.SaveChangesAsync(cancellationToken);
 
                 var lines = await SyncLinesAsync(
@@ -202,6 +208,55 @@ internal sealed class EipicoDefinitionSyncService(
         }
 
         return factories;
+    }
+
+    private async Task SyncDefaultFactoryShiftsAsync(
+        IEnumerable<Factory> factories,
+        CancellationToken cancellationToken)
+    {
+        var factoryIds = factories.Select(x => x.Id).Distinct().ToArray();
+        var existing = await db.Shifts
+            .IgnoreQueryFilters()
+            .Where(x => factoryIds.Contains(x.FactoryId))
+            .ToListAsync(cancellationToken);
+
+        var definitions = new[]
+        {
+            new { Name = "Day Shift", Start = TimeSpan.FromHours(8), End = TimeSpan.FromHours(20) },
+            new { Name = "Night Shift", Start = TimeSpan.FromHours(20), End = TimeSpan.FromHours(8) }
+        };
+
+        foreach (var factoryId in factoryIds)
+        {
+            foreach (var definition in definitions)
+            {
+                var shift = existing.FirstOrDefault(x =>
+                    x.FactoryId == factoryId &&
+                    (string.Equals(x.Name, definition.Name, StringComparison.OrdinalIgnoreCase) ||
+                     x.StartTime == definition.Start && x.EndTime == definition.End));
+
+                if (shift is null)
+                {
+                    shift = new Shift
+                    {
+                        FactoryId = factoryId,
+                        Name = definition.Name,
+                        StartTime = definition.Start,
+                        EndTime = definition.End,
+                        IsActive = true
+                    };
+                    db.Shifts.Add(shift);
+                    existing.Add(shift);
+                }
+                else
+                {
+                    Restore(shift);
+                    shift.StartTime = definition.Start;
+                    shift.EndTime = definition.End;
+                    shift.IsActive = true;
+                }
+            }
+        }
     }
 
     private async Task<Dictionary<int, ProductionLine>> SyncLinesAsync(
