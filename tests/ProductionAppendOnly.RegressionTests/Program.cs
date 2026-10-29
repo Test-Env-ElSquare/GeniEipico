@@ -26,6 +26,22 @@ void Check(bool condition, string name)
     Console.WriteLine($"PASS: {name}");
 }
 
+var zone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo");
+DateTime UtcLocal(int day, int hour, int minute = 0) => TimeZoneInfo.ConvertTimeToUtc(
+    new DateTime(2026, 10, day, hour, minute, 0, DateTimeKind.Unspecified), zone);
+foreach (var (day, hour, minute, expectedDay, expectedHour) in new[]
+{
+    (29, 7, 59, 28, 20), (29, 8, 0, 29, 8), (29, 19, 59, 29, 8),
+    (29, 20, 0, 29, 20), (30, 0, 0, 29, 20), (30, 7, 59, 29, 20),
+    (30, 8, 0, 30, 8)
+})
+{
+    Check(Application.Common.Time.EipicoProductionShift.ResolveUtc(UtcLocal(day, hour, minute), "Africa/Cairo")
+        == UtcLocal(expectedDay, expectedHour), $"Eipico shift boundary {day} {hour}:{minute:00}");
+}
+var shiftReading = new MachineState { Timestamp = UtcLocal(29, 9), ShiftStartTime = UtcLocal(29, 8) };
+Check(ProductionRecordFactory.Create(shiftReading, null, false).ShiftStartTime == shiftReading.ShiftStartTime,
+    "Production factory preserves supplied shift start");
 var at = new DateTime(2026, 9, 28, 8, 0, 0, DateTimeKind.Utc);
 var first = new MachineState { Id = 41, MachineId = "Mixer_1_1", CustomerId = 7, FactoryId = 1, LineId = 1,
     Timestamp = at, Count = 100, CountDiff = 17, State = 1, Speed = 450, Temp = 30,

@@ -14,6 +14,7 @@ public static class ProductionRecordFactory
             FactoryId = reading.FactoryId,
             LineId = reading.LineId,
             Timestamp = reading.Timestamp,
+            ShiftStartTime = reading.ShiftStartTime,
             State = reading.State,
             Speed = measurements.Speed,
             Count = measurements.Count,
