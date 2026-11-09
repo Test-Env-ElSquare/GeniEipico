@@ -5,6 +5,7 @@ namespace Domain.Entities.MasterData;
 
 public class Transformer : Entity
 {
+    public int? EmsEnergySourceId { get; set; }
     public string TransformerName { get; set; } = string.Empty;
     public int FactoryId { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -41,6 +41,33 @@ public class FactoryConfiguration : IEntityTypeConfiguration<Factory>
         builder.Property(x => x.TimeZone).HasMaxLength(60).IsRequired();
         builder.HasOne(x => x.Customer).WithMany(x => x.Factories).HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => new { x.CustomerId, x.Code }).IsUnique().HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => x.EmsEnergySourceId)
+            .IsUnique()
+            .HasFilter("[EmsEnergySourceId] IS NOT NULL");
+    }
+}
+
+public sealed class EnergyZoneConfiguration : IEntityTypeConfiguration<EnergyZone>
+{
+    public void Configure(EntityTypeBuilder<EnergyZone> builder)
+    {
+        builder.ToTable("EnergyZones", SchemaNames.Organization);
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).ValueGeneratedOnAdd();
+        builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.RatioFromParent).HasPrecision(18, 4);
+        builder.Property(x => x.SourceCreatedAt).HasColumnType("datetime2");
+        builder.HasOne(x => x.Factory)
+            .WithMany()
+            .HasForeignKey(x => x.FactoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.Transformer)
+            .WithMany()
+            .HasForeignKey(x => x.TransformerId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(x => new { x.FactoryId, x.EmsSourceId }).IsUnique();
+        builder.HasIndex(x => x.TransformerId);
+        builder.HasIndex(x => new { x.FactoryId, x.Name });
     }
 }
 
@@ -56,8 +83,17 @@ public class ProductionLineConfiguration : IEntityTypeConfiguration<ProductionLi
         builder.Property(x => x.ViewName).HasMaxLength(100);
         builder.Property(x => x.AliasName).HasMaxLength(200);
         builder.Property(x => x.ProductType).HasMaxLength(60);
+        builder.Property(x => x.EnergyRatioFromParent).HasPrecision(18, 4);
         builder.HasOne(x => x.Factory).WithMany(x => x.ProductionLines).HasForeignKey(x => x.FactoryId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasOne(x => x.EnergyZone)
+            .WithMany(x => x.ProductionLines)
+            .HasForeignKey(x => x.EnergyZoneId)
+            .OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(x => new { x.FactoryId, x.Code }).IsUnique().HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => x.EnergyZoneId);
+        builder.HasIndex(x => x.EmsEnergySourceId)
+            .IsUnique()
+            .HasFilter("[EmsEnergySourceId] IS NOT NULL");
     }
 }
 

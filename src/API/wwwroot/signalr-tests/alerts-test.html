@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Energy Alerts SignalR Test</title>
+    <link rel="stylesheet" href="scada-test.css">
+    <style>
+        code { color: #93c5fd; }
+
+        .contract {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .contract-item {
+            padding: 14px;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            background: #0b1426;
+        }
+
+        .contract-label {
+            margin-bottom: 7px;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .contract-value {
+            font-weight: 700;
+            word-break: break-word;
+        }
+
+        .alerts-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .alerts {
+            display: grid;
+            gap: 12px;
+        }
+
+        .alert-card {
+            padding: 15px;
+            border: 1px solid #334155;
+            border-left: 4px solid #64748b;
+            border-radius: 10px;
+            background: #0b1426;
+        }
+
+        .alert-card.severity-1 { border-left-color: #38bdf8; }
+        .alert-card.severity-2 { border-left-color: #f59e0b; }
+        .alert-card.severity-3 { border-left-color: #fb7185; }
+        .alert-card.severity-4 { border-left-color: #ef4444; }
+
+        .alert-top,
+        .alert-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .alert-title { font-weight: 750; }
+
+        .severity {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #1e293b;
+            font-size: 11px;
+            font-weight: 750;
+            text-transform: uppercase;
+        }
+
+        .alert-message {
+            margin: 10px 0;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+        }
+
+        .alert-meta {
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            color: #94a3b8;
+            font-size: 12px;
+        }
+
+        .empty {
+            padding: 26px;
+            border: 1px dashed #475569;
+            border-radius: 10px;
+            color: #94a3b8;
+            text-align: center;
+        }
+
+        @media (max-width: 700px) {
+            .contract { grid-template-columns: 1fr; }
+            .alert-top { align-items: flex-start; }
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <h1>Energy Alerts SignalR Test</h1>
+    <p class="subtitle">
+        Connects to the authenticated EMS-compatible alerts hub and listens for
+        <code>ReceiveAlert</code>. No subscription method is required.
+    </p>
+
+    <section class="panel">
+        <div class="contract">
+            <div class="contract-item">
+                <div class="contract-label">Hub path</div>
+                <div class="contract-value"><code>/hubs/alerts</code></div>
+            </div>
+            <div class="contract-item">
+                <div class="contract-label">Client event</div>
+                <div class="contract-value"><code>ReceiveAlert</code></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="grid">
+            <div class="field full">
+                <label for="apiBaseUrl">API base URL</label>
+                <input id="apiBaseUrl" autocomplete="url">
+            </div>
+            <div class="field">
+                <label for="email">Email</label>
+                <input id="email" type="email" autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input id="password" type="password" autocomplete="current-password">
+            </div>
+            <div class="field full">
+                <label for="token">JWT access token</label>
+                <textarea id="token" spellcheck="false"
+                          placeholder="Login or paste an access token"></textarea>
+            </div>
+        </div>
+        <div class="buttons">
+            <button id="loginButton" type="button">Login</button>
+            <button id="connectButton" type="button">Connect</button>
+            <button id="disconnectButton" class="secondary" type="button">Disconnect</button>
+            <button id="sampleButton" class="secondary" type="button">Render sample</button>
+        </div>
+        <div class="hint">
+            A successful connection proves authentication and hub negotiation. A real message
+            appears only when Genie creates a new alarm visible to the authenticated user.
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="status-row">
+            <div id="connectionStatus" class="status">
+                <span class="dot"></span>
+                <span id="connectionStatusText">Disconnected</span>
+            </div>
+            <div id="messageStats" class="stats">0 messages</div>
+        </div>
+        <div id="connectionMeta" class="hint">Connection ID: —</div>
+    </section>
+
+    <section class="panel">
+        <div class="alerts-header">
+            <strong>Received alerts</strong>
+            <button id="clearButton" class="secondary" type="button">Clear</button>
+        </div>
+        <div id="alerts" class="alerts">
+            <div class="empty">Waiting for ReceiveAlert...</div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="alerts-header">
+            <strong>Latest raw payload</strong>
+            <span class="stats">JSON</span>
+        </div>
+        <pre id="output">Waiting for connection...</pre>
+    </section>
+</main>
+
+<script src="../lib/signalr/signalr.min.js"></script>
+<script src="alerts-test.js"></script>
+</body>
+</html>

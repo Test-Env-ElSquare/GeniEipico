@@ -90,6 +90,9 @@ public class TransformerConfiguration : IEntityTypeConfiguration<Transformer>
         builder.HasIndex(x => x.TransformerName)
             .IsUnique()
             .HasFilter("[IsDeleted] = 0");
+        builder.HasIndex(x => x.EmsEnergySourceId)
+            .IsUnique()
+            .HasFilter("[EmsEnergySourceId] IS NOT NULL");
         builder.HasQueryFilter(x => !x.IsDeleted);
     }
 }

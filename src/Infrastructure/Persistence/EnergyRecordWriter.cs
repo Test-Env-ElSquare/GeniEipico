@@ -13,7 +13,7 @@ public sealed class EnergyRecordWriter(DbContextOptions<MesDbContext> options) :
         {
             await using var db = new MesDbContext(options);
             await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-            var key = $"Analytics.EnergyReadings:transformer:{transformerId}";
+            var key = $"RealTime.EnergyReadings:transformer:{transformerId}";
             await db.Database.ExecuteSqlInterpolatedAsync($"""
                 DECLARE @result int;
                 EXEC @result=sys.sp_getapplock @Resource={key}, @LockMode=N'Exclusive',

@@ -827,6 +827,21 @@ namespace Infrastructure.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<long?>("EmsSourceRecordId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("EnergyDiffL1")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("EnergyDiffL2")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<decimal?>("EnergyDiffL3")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<decimal?>("EnergyL1")
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)");
@@ -872,11 +887,18 @@ namespace Infrastructure.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("decimal(18,6)");
 
+                    b.Property<DateTime?>("ShiftStartTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<long?>("SourceRecordId")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("TotalEnergyConsumptionDiff")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("decimal(18,6)");
 
                     b.Property<int>("TransformerId")
                         .HasColumnType("int");
@@ -907,6 +929,10 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("EmsSourceRecordId")
+                        .IsUnique()
+                        .HasFilter("[EmsSourceRecordId] IS NOT NULL");
+
                     b.HasIndex("FactoryId");
 
                     b.HasIndex("LineId");
@@ -920,7 +946,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("CustomerId", "FactoryId", "LineId", "Timestamp");
 
-                    b.ToTable("EnergyReadings", "Analytics");
+                    b.ToTable("EnergyReadings", "RealTime");
                 });
 
             modelBuilder.Entity("Domain.Entities.Analytics.OeeSnapshot", b =>
@@ -2841,6 +2867,9 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
+                    b.Property<int?>("EmsEnergySourceId")
+                        .HasColumnType("int");
+
                     b.Property<int>("FactoryId")
                         .HasColumnType("int");
 
@@ -2855,6 +2884,10 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EmsEnergySourceId")
+                        .IsUnique()
+                        .HasFilter("[EmsEnergySourceId] IS NOT NULL");
 
                     b.HasIndex("FactoryId");
 
@@ -2948,6 +2981,50 @@ namespace Infrastructure.Migrations
                     b.ToTable("Customers", "Org");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Organization.EnergyZone", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("EmsSourceId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FactoryId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal?>("RatioFromParent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("SourceCreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("TransformerId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransformerId");
+
+                    b.HasIndex("FactoryId", "EmsSourceId")
+                        .IsUnique();
+
+                    b.HasIndex("FactoryId", "Name");
+
+                    b.ToTable("EnergyZones", "Org");
+                });
+
             modelBuilder.Entity("Domain.Entities.Organization.Factory", b =>
                 {
                     b.Property<int>("Id")
@@ -2980,6 +3057,9 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("EmsEnergySourceId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
@@ -3002,6 +3082,10 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EmsEnergySourceId")
+                        .IsUnique()
+                        .HasFilter("[EmsEnergySourceId] IS NOT NULL");
 
                     b.HasIndex("CustomerId", "Code")
                         .IsUnique()
@@ -3039,6 +3123,16 @@ namespace Infrastructure.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("EmsEnergySourceId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("EnergyRatioFromParent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int?>("EnergyZoneId")
+                        .HasColumnType("int");
+
                     b.Property<int>("FactoryId")
                         .HasColumnType("int");
 
@@ -3073,6 +3167,12 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("EmsEnergySourceId")
+                        .IsUnique()
+                        .HasFilter("[EmsEnergySourceId] IS NOT NULL");
+
+                    b.HasIndex("EnergyZoneId");
 
                     b.HasIndex("FactoryId", "Code")
                         .IsUnique()
@@ -5238,6 +5338,24 @@ namespace Infrastructure.Migrations
                     b.Navigation("Factory");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Organization.EnergyZone", b =>
+                {
+                    b.HasOne("Domain.Entities.Organization.Factory", "Factory")
+                        .WithMany()
+                        .HasForeignKey("FactoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.MasterData.Transformer", "Transformer")
+                        .WithMany()
+                        .HasForeignKey("TransformerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Factory");
+
+                    b.Navigation("Transformer");
+                });
+
             modelBuilder.Entity("Domain.Entities.Organization.Factory", b =>
                 {
                     b.HasOne("Domain.Entities.Organization.Customer", "Customer")
@@ -5251,11 +5369,18 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Organization.ProductionLine", b =>
                 {
+                    b.HasOne("Domain.Entities.Organization.EnergyZone", "EnergyZone")
+                        .WithMany("ProductionLines")
+                        .HasForeignKey("EnergyZoneId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Domain.Entities.Organization.Factory", "Factory")
                         .WithMany("ProductionLines")
                         .HasForeignKey("FactoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("EnergyZone");
 
                     b.Navigation("Factory");
                 });
@@ -5812,6 +5937,11 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Organization.Customer", b =>
                 {
                     b.Navigation("Factories");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Organization.EnergyZone", b =>
+                {
+                    b.Navigation("ProductionLines");
                 });
 
             modelBuilder.Entity("Domain.Entities.Organization.Factory", b =>

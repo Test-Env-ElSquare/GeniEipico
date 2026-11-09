@@ -11,6 +11,7 @@ namespace Domain.Entities.Analytics;
 public class EnergyReading : Entity
 {
     public long? SourceRecordId { get; set; }
+    public long? EmsSourceRecordId { get; set; }
     public int CustomerId { get; set; }
     public int FactoryId { get; set; }
     public int? LineId { get; set; }
@@ -38,6 +39,10 @@ public class EnergyReading : Entity
     public decimal? EnergyL1 { get; set; }
     public decimal? EnergyL2 { get; set; }
     public decimal? EnergyL3 { get; set; }
+    public decimal? EnergyDiffL1 { get; set; }
+    public decimal? EnergyDiffL2 { get; set; }
+    public decimal? EnergyDiffL3 { get; set; }
+    public decimal? TotalEnergyConsumptionDiff { get; set; }
     public decimal? VoltageThdL1 { get; set; }
     public decimal? VoltageThdL2 { get; set; }
     public decimal? VoltageThdL3 { get; set; }
@@ -45,6 +50,7 @@ public class EnergyReading : Entity
     public decimal? CurrentThdL2 { get; set; }
     public decimal? CurrentThdL3 { get; set; }
     public DateTime Timestamp { get; set; }
+    public DateTime? ShiftStartTime { get; set; }
 
     public Customer Customer { get; set; } = null!;
     public Factory Factory { get; set; } = null!;

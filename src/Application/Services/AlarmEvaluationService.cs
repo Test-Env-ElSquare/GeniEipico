@@ -11,10 +11,14 @@ namespace Application.Services;
 public sealed class AlarmEvaluationService : IAlarmEvaluationService
 {
     private readonly IUnitOfWork _uow;
+    private readonly IRealtimeAlertPublisher? _realtimeAlerts;
 
-    public AlarmEvaluationService(IUnitOfWork uow)
+    public AlarmEvaluationService(
+        IUnitOfWork uow,
+        IRealtimeAlertPublisher? realtimeAlerts = null)
     {
         _uow = uow;
+        _realtimeAlerts = realtimeAlerts;
     }
 
     public async Task<WorkflowResult<AlarmEvaluationOutcome>> EvaluateAsync(
@@ -127,34 +131,37 @@ public sealed class AlarmEvaluationService : IAlarmEvaluationService
                     x.IsEnabled)
                 .OrderBy(x => x.SequenceNo)
                 .FirstOrDefault();
-            if (action is null)
-                continue;
-
-            var factoryId = _uow.ProductionLines.Query()
-                .Where(x => x.Id == machine.LineId)
-                .Select(x => x.FactoryId)
-                .FirstOrDefault();
-            if (factoryId <= 0)
-                continue;
-
-            var workOrder = new WorkOrder
+            if (action is not null)
             {
-                Number = $"WO-{DateTime.UtcNow:yyMMddHHmmssfff}-{alarm.Id}",
-                CustomerId = device.CustomerId,
-                FactoryId = factoryId,
-                WorkOrderType = WorkOrderType.Corrective,
-                Priority = action.WorkOrderPriority ?? SeverityPriority(rule.Severity),
-                MachineId = machine.Id,
-                AlarmEventId = alarm.Id,
-                Description = $"Automatically created from alarm: {alarm.Title}",
-                AssignedToId = action.AssignedToId,
-                PlannedStart = recordedAt,
-                Status = WorkOrderStatus.Open,
-                CreatedById = rule.CreatedById
-            };
-            await _uow.WorkOrders.AddAsync(workOrder);
-            await _uow.SaveChangesAsync();
-            createdWorkOrderIds.Add(workOrder.Id);
+                var factoryId = _uow.ProductionLines.Query()
+                    .Where(x => x.Id == machine.LineId)
+                    .Select(x => x.FactoryId)
+                    .FirstOrDefault();
+                if (factoryId > 0)
+                {
+                    var workOrder = new WorkOrder
+                    {
+                        Number = $"WO-{DateTime.UtcNow:yyMMddHHmmssfff}-{alarm.Id}",
+                        CustomerId = device.CustomerId,
+                        FactoryId = factoryId,
+                        WorkOrderType = WorkOrderType.Corrective,
+                        Priority = action.WorkOrderPriority ?? SeverityPriority(rule.Severity),
+                        MachineId = machine.Id,
+                        AlarmEventId = alarm.Id,
+                        Description = $"Automatically created from alarm: {alarm.Title}",
+                        AssignedToId = action.AssignedToId,
+                        PlannedStart = recordedAt,
+                        Status = WorkOrderStatus.Open,
+                        CreatedById = rule.CreatedById
+                    };
+                    await _uow.WorkOrders.AddAsync(workOrder);
+                    await _uow.SaveChangesAsync();
+                    createdWorkOrderIds.Add(workOrder.Id);
+                }
+            }
+
+            if (_realtimeAlerts is not null)
+                await _realtimeAlerts.PublishTriggeredAsync(alarm);
         }
 
         if (resolvedAlarmIds.Count > 0)

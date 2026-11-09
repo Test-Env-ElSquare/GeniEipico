@@ -1,4 +1,5 @@
 using API.Extensions;
+using API.Realtime.Alerts;
 using API.Realtime.Scada;
 using Infrastructure.Identity;
 using Microsoft.OpenApi.Models;
@@ -11,6 +12,7 @@ builder.Logging.AddDebug();
 
 builder.Services.AddMesPlatformApiServices(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -38,44 +40,84 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI(options =>
-//    {
-//        options.SwaggerEndpoint("/swagger/v1/swagger.json", "MES Platform API v1");
-//        options.RoutePrefix = "swagger";
-//    });
-//}
-
-
+// Swagger
 app.UseSwagger();
-//app.UseSwaggerUI();
-////app.UseMiddleware<ExceptionMiddleware>();   // ? add (must be before UseCors/Auth)
 
 app.UseSwaggerUI(options =>
 {
-    options.SwaggerEndpoint("v1/swagger.json", "MES Platform API v1");
+    options.SwaggerEndpoint(
+        "v1/swagger.json",
+        "MES Platform API v1");
+
     options.RoutePrefix = "swagger";
 });
-app.UseStaticFiles();
-app.UseCors("AllowAll");
 
+// Static Files
+app.UseStaticFiles();
+
+// Routing must run before CORS
+app.UseRouting();
+
+// Separate CORS handling for SignalR.
+// Every request passes through only one CORS policy.
+app.UseCors();
+//app.UseWhen(
+//    context =>
+//        context.Request.Path.StartsWithSegments("/signalsHub") ||
+//        context.Request.Path.StartsWithSegments("/hubs/scaleStatus"),
+//    branch =>
+//    {
+//        branch.UseCors("SignalRCors");
+//    });
+
+//// Keep the original AllowAll policy for all other endpoints.
+//app.UseWhen(
+//    context =>
+//        !context.Request.Path.StartsWithSegments("/signalsHub") &&
+//        !context.Request.Path.StartsWithSegments("/hubs/scaleStatus"),
+//    branch =>
+//    {
+//        branch.UseCors("AllowAll");
+//    });
+
+// Root endpoint
 app.MapGet("/", () => Results.Redirect("/swagger"));
 
-if (builder.Configuration.GetValue<bool>("RuntimeFeatures:EnableIdentitySeed"))
+// Identity Seeding
+if (builder.Configuration.GetValue<bool>(
+    "RuntimeFeatures:EnableIdentitySeed"))
 {
     await app.Services.SeedMesIdentityAsync();
 }
 
-if (builder.Configuration.GetValue<bool>("Hosting:UseHttpsRedirection"))
+// HTTPS Redirection
+if (builder.Configuration.GetValue<bool>(
+    "Hosting:UseHttpsRedirection"))
 {
     app.UseHttpsRedirection();
 }
+
+// Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Controllers
 app.MapControllers();
+
+// SCADA Realtime Hub
 app.MapHub<ScadaRealtimeHub>("/hubs/scada");
-app.MapHub<API.Realtime.Signage.SignageSignalsHub>("/signalsHub");
-app.MapHub<API.Realtime.Signage.SignageScaleStatusHub>("/hubs/scaleStatus");
+
+// Signage Signals Hub
+app.MapHub<API.Realtime.Signage.SignageSignalsHub>(
+    "/signalsHub")
+    .RequireCors("SignalRCors");
+
+app.MapHub<API.Realtime.Signage.SignageScaleStatusHub>(
+    "/hubs/scaleStatus")
+    .RequireCors("SignalRCors");
+
+// EMS-compatible realtime alerts used by the Energy Dashboard.
+app.MapHub<AlertsHub>(AlertsHub.Route)
+    .RequireCors("SignalRCors");
+
 app.Run();

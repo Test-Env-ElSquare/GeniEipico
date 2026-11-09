@@ -14,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.SqlClient;
 using Infrastructure.Integration;
+using Infrastructure.Services;
 
 namespace Infrastructure.DependencyInjection;
 
@@ -21,6 +22,7 @@ public static class InfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddMemoryCache();
         services.AddScoped<IPlanningService, Infrastructure.Services.PlanningService>();
         var connectionString = configuration.GetConnectionString("MCPAConn");
 
@@ -163,6 +165,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.Configure<Application.Dtos.Overview.EipicoOverviewOptions>(configuration.GetSection("Overview:Eipico"));
         services.AddScoped<IProductionRecordWriter, ProductionRecordWriter>();
         services.AddScoped<IEnergyRecordWriter, EnergyRecordWriter>();
+        services.AddScoped<IEnergyDashboardService, EnergyDashboardService>();
 
         services.Configure<EipicoSyncOptions>(configuration.GetSection(EipicoSyncOptions.SectionName));
         if (configuration.GetValue<bool>("RuntimeFeatures:EnableEipicoSync"))
@@ -214,6 +217,56 @@ public static class InfrastructureServiceCollectionExtensions
             services.AddScoped<EipicoSapSyncService>();
             services.AddScoped<EipicoRealtimeSyncService>();
             services.AddScoped<EipicoDefinitionSyncService>();
+        }
+
+        services.Configure<EmsEnergySyncOptions>(
+            configuration.GetSection(EmsEnergySyncOptions.SectionName));
+        if (configuration.GetValue<bool>("RuntimeFeatures:EnableEmsEnergySync"))
+        {
+            var emsSourceConnectionString = configuration.GetConnectionString("EmsEnergySource");
+            if (string.IsNullOrWhiteSpace(emsSourceConnectionString))
+            {
+                throw new InvalidOperationException(
+                    "Connection string 'EmsEnergySource' is required when EMS Energy sync is enabled.");
+            }
+
+            EnsureNoDeploymentPlaceholder(
+                emsSourceConnectionString,
+                "ConnectionStrings:EmsEnergySource");
+
+            var emsSourceBuilder = new SqlConnectionStringBuilder(emsSourceConnectionString);
+            var expectedEmsDatabase = configuration[
+                $"{EmsEnergySyncOptions.SectionName}:ExpectedSourceDatabase"] ?? "EMS";
+            if (!string.Equals(
+                    emsSourceBuilder.InitialCatalog,
+                    expectedEmsDatabase,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"EMS Energy source safety check failed. EmsEnergySource targets " +
+                    $"'{emsSourceBuilder.InitialCatalog}', but '{expectedEmsDatabase}' is required.");
+            }
+
+            if (emsSourceBuilder.ApplicationIntent != ApplicationIntent.ReadOnly)
+            {
+                throw new InvalidOperationException(
+                    "EmsEnergySource must include ApplicationIntent=ReadOnly.");
+            }
+
+            var targetBuilder = new SqlConnectionStringBuilder(connectionString);
+            if (string.Equals(
+                    emsSourceBuilder.InitialCatalog,
+                    targetBuilder.InitialCatalog,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "EmsEnergySource and MCPAConn must target different databases.");
+            }
+
+            services.AddSingleton(new EmsEnergySourceReader(emsSourceConnectionString));
+            services.AddSingleton<EmsEnergySourceTime>();
+            services.AddScoped<EmsEnergyDefinitionSyncService>();
+            services.AddScoped<EmsEnergyRealtimeSyncService>();
         }
 
         return services;

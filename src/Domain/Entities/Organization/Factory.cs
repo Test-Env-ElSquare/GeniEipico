@@ -5,6 +5,7 @@ namespace Domain.Entities.Organization;
 
 public class Factory : SoftDeleteEntity
 {
+    public int? EmsEnergySourceId { get; set; }
     public int CustomerId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;

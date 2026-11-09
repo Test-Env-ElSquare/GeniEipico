@@ -21,4 +21,11 @@
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Keep the reviewed IIS configuration in every folder/Visual Studio publish. -->
+    <Content Update="web.config"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="Always" />
+  </ItemGroup>
 </Project>

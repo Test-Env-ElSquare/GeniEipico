@@ -59,7 +59,7 @@ public class EnergyReadingConfiguration : IEntityTypeConfiguration<EnergyReading
 {
     public void Configure(EntityTypeBuilder<EnergyReading> builder)
     {
-        builder.ToTable("EnergyReadings", SchemaNames.Analytics);
+        builder.ToTable("EnergyReadings", SchemaNames.RealTime);
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedOnAdd();
         builder.Property(x => x.Timestamp).HasColumnType("datetime2").IsRequired();
@@ -85,12 +85,17 @@ public class EnergyReadingConfiguration : IEntityTypeConfiguration<EnergyReading
         builder.Property(x => x.EnergyL1).HasPrecision(18, 6);
         builder.Property(x => x.EnergyL2).HasPrecision(18, 6);
         builder.Property(x => x.EnergyL3).HasPrecision(18, 6);
+        builder.Property(x => x.EnergyDiffL1).HasPrecision(18, 6);
+        builder.Property(x => x.EnergyDiffL2).HasPrecision(18, 6);
+        builder.Property(x => x.EnergyDiffL3).HasPrecision(18, 6);
+        builder.Property(x => x.TotalEnergyConsumptionDiff).HasPrecision(18, 6);
         builder.Property(x => x.VoltageThdL1).HasPrecision(18, 6);
         builder.Property(x => x.VoltageThdL2).HasPrecision(18, 6);
         builder.Property(x => x.VoltageThdL3).HasPrecision(18, 6);
         builder.Property(x => x.CurrentThdL1).HasPrecision(18, 6);
         builder.Property(x => x.CurrentThdL2).HasPrecision(18, 6);
         builder.Property(x => x.CurrentThdL3).HasPrecision(18, 6);
+        builder.Property(x => x.ShiftStartTime).HasColumnType("datetime2");
 
         builder.HasOne(x => x.Customer)
             .WithMany()
@@ -111,6 +116,7 @@ public class EnergyReadingConfiguration : IEntityTypeConfiguration<EnergyReading
 
         builder.HasIndex(x => new { x.TransformerId, x.Timestamp }).IsUnique();
         builder.HasIndex(x => x.SourceRecordId).IsUnique().HasFilter("[SourceRecordId] IS NOT NULL");
+        builder.HasIndex(x => x.EmsSourceRecordId).IsUnique().HasFilter("[EmsSourceRecordId] IS NOT NULL");
         builder.HasIndex(x => new { x.CustomerId, x.FactoryId, x.LineId, x.Timestamp });
         builder.HasIndex(x => x.FactoryId);
         builder.HasIndex(x => x.LineId);

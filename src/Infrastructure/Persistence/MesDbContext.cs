@@ -27,6 +27,7 @@ public class MesDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, 
 
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Factory> Factories => Set<Factory>();
+    public DbSet<EnergyZone> EnergyZones => Set<EnergyZone>();
     public DbSet<ProductionLine> ProductionLines => Set<ProductionLine>();
     public DbSet<ProductionLineTransformer> ProductionLineTransformers => Set<ProductionLineTransformer>();
 
